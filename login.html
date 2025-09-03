@@ -34,16 +34,14 @@
   </div>
 
   <script>
-    // 🔑 API base: use relative paths to avoid mixed-content
+    // 🔑 API base: your domain via Nginx
     const API_BASE = "https://olyne.shop";
-
 
     async function safeFetch(url, options) {
       try {
         console.log("🌍 Fetching:", url, options);
         const response = await fetch(url, options);
 
-        // Get raw text first
         const text = await response.text();
         let result;
         try {
@@ -74,7 +72,7 @@
       const password = document.getElementById("regPassword").value.trim();
       if (!username || !password) { alert("⚠️ Please fill all fields"); return; }
 
-      const result = await safeFetch(`/register`, {
+      const result = await safeFetch(`${API_BASE}/register`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
@@ -93,7 +91,7 @@
       const password = document.getElementById("password").value.trim();
       if (!username || !password) { alert("⚠️ Please fill all fields"); return; }
 
-      const result = await safeFetch(`/login`, {
+      const result = await safeFetch(`${API_BASE}/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password })
