@@ -39,31 +39,33 @@
 
     // 🛡️ Fetch helper with smart JSON/text parsing
     async function safeFetch(url, options) {
-      try {
-        console.log("🌍 Fetching:", url, options);
-        const response = await fetch(url, options);
+  try {
+    console.log("🌍 Fetching:", url, options);
+    const response = await fetch(url, options);
 
-        let result;
-        try {
-          result = await response.json();
-        } catch {
-          result = { message: await response.text() || "Invalid response" };
-        }
-
-        console.log("📡 Response:", response.status, result);
-
-        if (!response.ok) {
-          alert(`❌ Error ${response.status}: ${result.message}`);
-          return null;
-        }
-
-        return result;
-      } catch (err) {
-        console.error("🔥 Fetch error:", err);
-        alert("🔥 Network/Fetch error: " + err.message);
-        return null;
-      }
+    let result;
+    try {
+      result = await response.json();
+    } catch (jsonErr) {
+      console.warn("⚠️ Response is not JSON:", jsonErr);
+      result = { message: "Invalid JSON" };
     }
+
+    console.log("📡 Response:", response.status, response.statusText, result);
+
+    if (!response.ok) {
+      alert(`❌ Error ${response.status}: ${result.message}`);
+      return null;
+    }
+
+    return result;
+  } catch (err) {
+    console.error("🔥 Fetch error:", err);
+    alert("🔥 Network/Fetch error: " + err.message);
+    return null;
+  }
+}
+
 
     // 📝 Signup handler
     document.getElementById("registerForm").addEventListener("submit", async (e) => {
