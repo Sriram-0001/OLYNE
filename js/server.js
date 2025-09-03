@@ -8,8 +8,15 @@ const bcrypt = require("bcrypt");
 const os = require("os");
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: ["https://olyne.shop", "https://www.olyne.shop"],
+  methods: ["GET", "POST"],
+  credentials: true
+}));
+
 app.use(bodyParser.json());
+
 
 // MySQL connection pool (better than single connection for scaling)
 const pool = mysql.createPool({
