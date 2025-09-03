@@ -34,21 +34,22 @@
   </div>
 
   <script>
-    // 🔑 Backend base URL (proxied via nginx to port 5000)
-    const API_BASE = "https://olyne.shop";
-
-    // 🛡️ Fetch helper with smart JSON/text parsing
-    async function safeFetch(url, options) {
+async function safeFetch(url, options) {
   try {
     console.log("🌍 Fetching:", url, options);
     const response = await fetch(url, options);
 
+    // Get raw text first
+    const text = await response.text();
     let result;
+
     try {
-      result = await response.json();
-    } catch (jsonErr) {
-      console.warn("⚠️ Response is not JSON:", jsonErr);
-      result = { message: "Invalid JSON" };
+      // Try parsing as JSON
+      result = JSON.parse(text);
+    } catch {
+      // If JSON parsing fails, just return raw text
+      console.warn("⚠️ Response is not JSON, returning raw text");
+      result = { message: text || "No response body" };
     }
 
     console.log("📡 Response:", response.status, response.statusText, result);
@@ -65,53 +66,7 @@
     return null;
   }
 }
+</script>
 
-
-    // 📝 Signup handler
-    document.getElementById("registerForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const username = document.getElementById("regUsername").value.trim();
-      const password = document.getElementById("regPassword").value.trim();
-
-      if (!username || !password) {
-        alert("⚠️ Please fill all fields");
-        return;
-      }
-
-      const result = await safeFetch(`${API_BASE}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-
-      if (result) {
-        alert(result.message || "Signup successful!");
-        location.reload();
-      }
-    });
-
-    // 🔑 Login handler
-    document.getElementById("loginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const username = document.getElementById("username").value.trim();
-      const password = document.getElementById("password").value.trim();
-
-      if (!username || !password) {
-        alert("⚠️ Please fill all fields");
-        return;
-      }
-
-      const result = await safeFetch(`${API_BASE}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
-
-      if (result) {
-        alert(result.message || "Login successful!");
-        window.location.href = "index.html";
-      }
-    });
-  </script>
 </body>
 </html>
