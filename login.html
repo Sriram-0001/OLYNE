@@ -66,10 +66,11 @@
       if (!username || !password) { alert("⚠️ Please fill all fields"); return; }
 
       const result = await safeFetch(`${API_BASE}/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ username, password })
+});
+
 
       if (result) {
         alert(result.message || "Signup successful!");
@@ -85,10 +86,11 @@
       if (!username || !password) { alert("⚠️ Please fill all fields"); return; }
 
       const result = await safeFetch(`${API_BASE}/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password })
-      });
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({ username, password })
+});
+
 
       if (result) {
         alert(result.message || "Login successful!");
