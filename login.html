@@ -34,7 +34,30 @@
   </div>
 
  <script>
-  const API_BASE = "https://olyne.shop"; // use HTTPS domain
+  const API_BASE = "https://olyne.shop"; // backend API
+
+  // Helper to log fetch errors
+  async function safeFetch(url, options) {
+    try {
+      console.log("🌍 Fetching:", url, options);
+      const response = await fetch(url, options);
+
+      console.log("📡 Response:", response.status, response.statusText);
+      const result = await response.json().catch(() => ({ message: "Invalid JSON" }));
+      console.log("📦 Response JSON:", result);
+
+      if (!response.ok) {
+        alert(`❌ Error ${response.status}: ${result.message}`);
+        return null;
+      }
+
+      return result;
+    } catch (err) {
+      console.error("🔥 Fetch error:", err);
+      alert("🔥 Network/Fetch error: " + err.message);
+      return null;
+    }
+  }
 
   // Signup
   document.getElementById("registerForm").addEventListener("submit", async (e) => {
@@ -42,15 +65,16 @@
     const username = document.getElementById("regUsername").value;
     const password = document.getElementById("regPassword").value;
 
-    const response = await fetch(`${API_BASE}/register`, {
+    const result = await safeFetch(`${API_BASE}/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })
     });
 
-    const result = await response.json();
-    alert(result.message);
-    if (response.ok) location.reload();
+    if (result) {
+      alert(result.message);
+      location.reload();
+    }
   });
 
   // Login
@@ -59,15 +83,16 @@
     const username = document.getElementById("username").value;
     const password = document.getElementById("password").value;
 
-    const response = await fetch(`${API_BASE}/login`, {
+    const result = await safeFetch(`${API_BASE}/login`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ username, password })
     });
 
-    const result = await response.json();
-    alert(result.message);
-    if (response.ok) window.location.href = "index.html";
+    if (result) {
+      alert(result.message);
+      window.location.href = "index.html";
+    }
   });
 </script>
 

@@ -1,4 +1,3 @@
-// server.js
 require("dotenv").config();
 const express = require("express");
 const mysql = require("mysql2/promise");
@@ -17,30 +16,33 @@ app.use(cors({
 
 app.use(bodyParser.json());
 
-
-// MySQL connection pool (better than single connection for scaling)
+// MySQL connection pool
 const pool = mysql.createPool({
   host: process.env.DB_HOST || "olyne-db.cx4u2wuku3gz.ap-southeast-2.rds.amazonaws.com",
   user: process.env.DB_USER || "olyne_admin",
-  password: process.env.DB_PASS || "olyne_sriram", // 🔒 move to .env
+  password: process.env.DB_PASS || "olyne_sriram",
   database: process.env.DB_NAME || "OLYNE",
   port: process.env.DB_PORT || 3306,
   connectionLimit: 10
 });
 
-// Health check & load balancer test
+// Health check
 app.get("/health", (req, res) => {
+  console.log("✅ /health checked");
   res.json({
     status: "ok",
-    hostname: os.hostname(), // shows which EC2 served the request
+    hostname: os.hostname(),
     timestamp: new Date().toISOString()
   });
 });
 
 // REGISTER route
 app.post("/register", async (req, res) => {
+  console.log("📩 /register hit", req.body);
+
   const { username, password } = req.body;
   if (!username || !password) {
+    console.warn("⚠️ Missing username or password");
     return res.status(400).json({ message: "Missing username or password" });
   }
 
@@ -50,35 +52,48 @@ app.post("/register", async (req, res) => {
       "INSERT INTO users (username, password) VALUES (?, ?)",
       [username, hashedPassword]
     );
+    console.log("✅ User registered:", username);
     res.json({ message: "User registered successfully!" });
   } catch (err) {
+    console.error("❌ DB Error (register):", err);
     if (err.code === "ER_DUP_ENTRY") {
       return res.status(400).json({ message: "User already exists" });
     }
-    console.error("❌ DB Error:", err);
-    res.status(500).json({ message: "Error registering user", error: err });
+    res.status(500).json({ message: "Error registering user", error: err.message });
   }
 });
 
 // LOGIN route
 app.post("/login", async (req, res) => {
+  console.log("📩 /login hit", req.body);
+
   const { username, password } = req.body;
   if (!username || !password) {
+    console.warn("⚠️ Missing username or password");
     return res.status(400).json({ message: "Missing username or password" });
   }
 
   try {
     const [results] = await pool.query("SELECT * FROM users WHERE username = ?", [username]);
-    if (results.length === 0) return res.status(400).json({ message: "Invalid credentials" });
+    console.log("🔍 DB Query Results:", results);
+
+    if (results.length === 0) {
+      console.warn("⚠️ No user found:", username);
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
     const user = results[0];
     const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
+    if (!isMatch) {
+      console.warn("⚠️ Password mismatch for:", username);
+      return res.status(400).json({ message: "Invalid credentials" });
+    }
 
+    console.log("✅ Login successful:", username);
     res.json({ message: "Login successful" });
   } catch (err) {
-    console.error("❌ DB Error:", err);
-    res.status(500).json({ message: "Server error" });
+    console.error("❌ DB Error (login):", err);
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 });
 
