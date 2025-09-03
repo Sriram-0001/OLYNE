@@ -34,7 +34,7 @@
   </div>
 
  <script>
-  const API_BASE = "http://54.79.113.222:5000"; // ← your EC2 backend
+  const API_BASE = "https://olyne.shop"; // use HTTPS domain
 
   // Signup
   document.getElementById("registerForm").addEventListener("submit", async (e) => {
@@ -50,7 +50,6 @@
 
     const result = await response.json();
     alert(result.message);
-
     if (response.ok) location.reload();
   });
 
@@ -68,10 +67,10 @@
 
     const result = await response.json();
     alert(result.message);
-
     if (response.ok) window.location.href = "index.html";
   });
 </script>
+
 
 </body>
 </html>

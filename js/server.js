@@ -1,88 +1,82 @@
 // server.js
+require("dotenv").config();
 const express = require("express");
-const mysql = require("mysql2");
+const mysql = require("mysql2/promise");
 const cors = require("cors");
 const bodyParser = require("body-parser");
 const bcrypt = require("bcrypt");
+const os = require("os");
 
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
-// MySQL connection (RDS)
-const db = mysql.createConnection({
-  host: "olyne-db.cx4u2wuku3gz.ap-southeast-2.rds.amazonaws.com",
-  user: "olyne_admin",
-  password: "olyne_sriram", // ❌ move to .env later
-  database: "OLYNE",
-  port: 3306
+// MySQL connection pool (better than single connection for scaling)
+const pool = mysql.createPool({
+  host: process.env.DB_HOST || "olyne-db.cx4u2wuku3gz.ap-southeast-2.rds.amazonaws.com",
+  user: process.env.DB_USER || "olyne_admin",
+  password: process.env.DB_PASS || "olyne_sriram", // 🔒 move to .env
+  database: process.env.DB_NAME || "OLYNE",
+  port: process.env.DB_PORT || 3306,
+  connectionLimit: 10
 });
 
-// Connect to DB
-db.connect(err => {
-  if (err) {
-    console.error("❌ Database connection failed:", err.message);
-  } else {
-    console.log("✅ Connected to MySQL RDS");
-  }
+// Health check & load balancer test
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    hostname: os.hostname(), // shows which EC2 served the request
+    timestamp: new Date().toISOString()
+  });
 });
 
-// REGISTER route (with bcrypt)
+// REGISTER route
 app.post("/register", async (req, res) => {
   const { username, password } = req.body;
-
   if (!username || !password) {
     return res.status(400).json({ message: "Missing username or password" });
   }
 
   try {
     const hashedPassword = await bcrypt.hash(password, 10);
-
-    db.query(
+    const [rows] = await pool.query(
       "INSERT INTO users (username, password) VALUES (?, ?)",
-      [username, hashedPassword],
-      (err) => {
-        if (err) {
-          if (err.code === "ER_DUP_ENTRY") {
-            return res.status(400).json({ message: "User already exists" });
-          }
-          return res.status(500).json({ message: "Error registering user", error: err });
-        }
-        res.json({ message: "User registered successfully!" });
-      }
+      [username, hashedPassword]
     );
+    res.json({ message: "User registered successfully!" });
   } catch (err) {
-    res.status(500).json({ message: "Server error" });
+    if (err.code === "ER_DUP_ENTRY") {
+      return res.status(400).json({ message: "User already exists" });
+    }
+    console.error("❌ DB Error:", err);
+    res.status(500).json({ message: "Error registering user", error: err });
   }
 });
 
-// LOGIN route (with bcrypt compare)
-app.post("/login", (req, res) => {
+// LOGIN route
+app.post("/login", async (req, res) => {
   const { username, password } = req.body;
-
   if (!username || !password) {
     return res.status(400).json({ message: "Missing username or password" });
   }
 
-  db.query(
-    "SELECT * FROM users WHERE username = ?",
-    [username],
-    async (err, results) => {
-      if (err) return res.status(500).json({ message: "DB error" });
-      if (results.length === 0) return res.status(400).json({ message: "Invalid credentials" });
+  try {
+    const [results] = await pool.query("SELECT * FROM users WHERE username = ?", [username]);
+    if (results.length === 0) return res.status(400).json({ message: "Invalid credentials" });
 
-      const user = results[0];
-      const isMatch = await bcrypt.compare(password, user.password);
+    const user = results[0];
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
 
-      if (!isMatch) return res.status(400).json({ message: "Invalid credentials" });
-
-      res.json({ message: "Login successful" });
-    }
-  );
+    res.json({ message: "Login successful" });
+  } catch (err) {
+    console.error("❌ DB Error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
 });
 
 // Run server
-const PORT = 5000;
+const PORT = process.env.PORT || 5000;
 app.listen(PORT, "0.0.0.0", () => {
-  console.log(`🚀 Server running on http://0.0.0.0:${PORT}`);
+  console.log(`🚀 Server running on port ${PORT}`);
 });
